@@ -136,36 +136,29 @@ public class GetNextRawPacket {
                             byte[] tmp_ip = Arrays.copyOfRange(packet, 14, 14 + ihl); // Creo una copia solo del encabezado IP, apartir del byte 14
                             IpV4Packet ip = IpV4Packet.newPacket(tmp_ip, 0, tmp_ip.length);
                             //Campo Version
-                            System.out.println("Version: " + ip.getHeader().getVersion().valueAsString());
+                            versionIP(ip);
                             //Campo IHL
-                            System.out.println("IHL: " + ip.getHeader().getIhlAsInt());
+                            ihlIP(ip);
                             //Campo Servicios Diferenciados                         
-                            System.out.println("Serv.Dif: " + ip.getHeader().getTos().toString());
+                            difServicesIP(ip);
                             //Campo Longitud total PDU
-                            int longTotal = (ip.getHeader().getTotalLength() > 0) ? ip.getHeader().getTotalLength() : ip.getHeader().getTotalLength() + 65536;
-                            System.out.println("Total Length: " + longTotal);
-                            //System.out.println("Prueba TOTAL: " + ip.getHeader().getTotalLength());
+                            longTotalIP(ip);
                             //Campo Bit identificacion   
-                            int id = (ip.getHeader().getIdentification() > 0) ? ip.getHeader().getIdentification() : ip.getHeader().getIdentification() + 65536;
-                            System.out.println("Identification: " + id);
+                            bitIdIP(ip);
                             //Campo Banderas
-                            String df = (ip.getHeader().getDontFragmentFlag()) ? "Encendido" : "Apagado";
-                            String mf = (ip.getHeader().getMoreFragmentFlag()) ? "Encendido" : "Apagado";
-                            System.out.println("Flags: \nNo fragmentar: " + df + "\nFaltan fragmentos: " + mf);
+                            flagsIP(ip);
                             //Campo Offset
-                            int desplazamiento = (ip.getHeader().getFragmentOffset() > 0) ? ip.getHeader().getFragmentOffset() : ip.getHeader().getFragmentOffset() + 65536;
-                            System.out.println("Fregment offset: " + desplazamiento);
+                            offsetIP(ip);
                             //Campo Tiempo de vida [TTL] 
-                            System.out.println("TTL: " + ip.getHeader().getTtlAsInt());
+                            lifeTimeIP(ip);
                             //Campo protocolo
-                            System.out.println("Protocol:" + ip.getHeader().getProtocol().name());
+                            protocolIP(ip);
                             //Campo Checksum
-                            System.out.printf("Header Checksum: %02X \n", ip.getHeader().getHeaderChecksum());
-
+                            checksumIP(ip);
                             //Campo Direccion IP Origen
-                            System.out.println("Source IP address: " + ip.getHeader().getSrcAddr().getHostAddress());
+                            sourceIP(ip);
                             //Campo Direccion IP Destino 
-                            System.out.println("Destination IP address: " + ip.getHeader().getDstAddr().getHostAddress());
+                            destinIP(ip);
                             //Campo Opciones y dato
                             // List <IpV4Packet.IpV4Option>;
 
@@ -215,6 +208,83 @@ public class GetNextRawPacket {
             System.out.printf("%02X ", trama[r]);
         }
         System.out.println("");
+    }
+
+    /*----------------------------------------------------------------------------------------------------TIPO IP-----------------------------------------------------------------------*/
+ /*public static void ipTypeIP(byte[] trama) {
+        //IP
+        int ihl = (trama[14] & 0x0f) * 4;
+
+    }*/
+    public static void versionIP(IpV4Packet ip) {
+        //Campo Version
+        System.out.println("Version: " + ip.getHeader().getVersion().valueAsString());
+
+    }
+
+    public static void ihlIP(IpV4Packet ip) {
+        //Campo IHL
+        System.out.println("IHL: " + ip.getHeader().getIhlAsInt());
+
+    }
+
+    public static void difServicesIP(IpV4Packet ip) {
+        //Campo Servicios Diferenciados                         
+        System.out.println("Serv.Dif: " + ip.getHeader().getTos().toString());
+
+    }
+
+    public static void longTotalIP(IpV4Packet ip) {
+        //Campo Longitud total PDU
+        int longTotal = (ip.getHeader().getTotalLength() > 0) ? ip.getHeader().getTotalLength() : ip.getHeader().getTotalLength() + 65536;
+        System.out.println("Longitud Total: " + longTotal);
+        //System.out.println("Prueba TOTAL: " + ip.getHeader().getTotalLength());
+
+    }
+
+    public static void bitIdIP(IpV4Packet ip) {
+        //Campo Bit identificacion  
+        int id = (ip.getHeader().getIdentification() > 0) ? ip.getHeader().getIdentification() : ip.getHeader().getIdentification() + 65536;
+        System.out.println("ID: " + id);
+
+    }
+
+    public static void flagsIP(IpV4Packet ip) {
+        //Campo Banderas
+        String df = (ip.getHeader().getDontFragmentFlag()) ? "Encendido" : "Apagado";
+        String mf = (ip.getHeader().getMoreFragmentFlag()) ? "Encendido" : "Apagado";
+        System.out.println("Banderas: \nNo fragmentar: " + df + "\nFaltan fragmentos: " + mf);
+    }
+
+    public static void offsetIP(IpV4Packet ip) {
+        //Campo Offset
+        int desplazamiento = (ip.getHeader().getFragmentOffset() > 0) ? ip.getHeader().getFragmentOffset() : ip.getHeader().getFragmentOffset() + 65536;
+        System.out.println("Fregmento offset: " + desplazamiento);
+    }
+
+    public static void lifeTimeIP(IpV4Packet ip) {
+        //Campo Tiempo de vida [TTL] 
+        System.out.println("TTL: " + ip.getHeader().getTtlAsInt());
+    }
+
+    public static void protocolIP(IpV4Packet ip) {
+        //Campo protocolo
+        System.out.println("Protocolo:" + ip.getHeader().getProtocol().name());
+    }
+
+    public static void checksumIP(IpV4Packet ip) {
+        //Campo Checksum
+        System.out.printf("Checksum: %02X \n", ip.getHeader().getHeaderChecksum());
+    }
+
+    public static void sourceIP(IpV4Packet ip) {
+        //Campo Direccion IP Origen
+        System.out.println("IP origen: " + ip.getHeader().getSrcAddr().getHostAddress());
+    }
+
+    public static void destinIP(IpV4Packet ip) {
+        //Campo Direccion IP Destino 
+        System.out.println("IP destino: " + ip.getHeader().getDstAddr().getHostAddress());
     }
 
     /*----------------------------------------------------------------------------------------------------TIPO ARP-----------------------------------------------------------------------*/
