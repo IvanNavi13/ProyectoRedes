@@ -24,7 +24,7 @@ import org.pcap4j.packet.IpV4Packet;
 public class GetNextRawPacket {
 
     private static final String COUNT_KEY = GetNextRawPacket.class.getName() + ".count";
-    private static final int COUNT = Integer.getInteger(COUNT_KEY, 5);
+    private static final int COUNT = Integer.getInteger(COUNT_KEY, 100000);  //<<<<--------------------------------------Cuantas tramas quiero capturar (contador)
 
     private static final String READ_TIMEOUT_KEY = GetNextRawPacket.class.getName() + ".readTimeout";
     private static final int READ_TIMEOUT = Integer.getInteger(READ_TIMEOUT_KEY, 10); // [ms]
@@ -43,7 +43,11 @@ public class GetNextRawPacket {
     }
 
     public static void main(String[] args) throws PcapNativeException, NotOpenException {
-        String filter = args.length != 0 ? args[0] : "";
+        ///*     ----> Colocar la interfaz
+        new Interfaz().setVisible(true);
+        //*/
+        
+        String filter = args.length != 0 ? args[0] : "arp";
 
         System.out.println(COUNT_KEY + ": " + COUNT);
         System.out.println(READ_TIMEOUT_KEY + ": " + READ_TIMEOUT);
@@ -115,7 +119,7 @@ public class GetNextRawPacket {
 
                 switch (tipo) {
 
-                    case (int) 2054: {             //   ----------------------------->Encabezado IP 
+                    case (int) 2054: {             //   ----------------------------->Encabezado ARP 
                         System.out.println("-------------> Tipo ARP <---------------");
                         hardwareType(packet);
                         protocolType(packet);
@@ -292,34 +296,36 @@ public class GetNextRawPacket {
         System.out.printf("Tipo de Hardware: ");
         for (int r = 14; r < 16; r++) {     //Obtener el tipo de hardware, en este caso tiene que ser 1 
             if (r % 16 == 0) {
-                System.out.println("");
+               // System.out.println("");
             }
             System.out.printf("%02X ", trama[r]);
-
+            
         }
-
+        System.out.println("");
     }
 
     public static void protocolType(byte[] trama) {
         System.out.printf("Tipo de Protocolo: ");
         for (int r = 16; r < 18; r++) {     //Obtener el tipo de protocolo, en este caso tiene que ser 0x0800 
             if (r % 16 == 0) {
-                System.out.println("");
+               // System.out.println("");
             }
             System.out.printf("%02X ", trama[r]);
-
+            
         }
+        System.out.println("");
     }
 
     public static void hardwareAdressLength(byte[] trama) {
         System.out.printf("Tamaño de la direccion fisica: ");
         for (int r = 18; r < 19; r++) {     //Obtener el tamaño de la direccion fisica, en este caso tiene que ser 0x06 
             if (r % 16 == 0) {
-                System.out.println("");
+               // System.out.println("");
             }
             System.out.printf("%02X ", trama[r]);
-
+            
         }
+        System.out.println("");
     }
 
     public static void protocolAdressLength(byte[] trama) {
@@ -329,8 +335,9 @@ public class GetNextRawPacket {
                 System.out.println("");
             }
             System.out.printf("%02X ", trama[r]);
+            
         }
-
+            System.out.println("");
     }
 
     public static void opCode(byte[] trama) {
@@ -342,6 +349,7 @@ public class GetNextRawPacket {
             System.out.printf("%02X ", trama[r]);
 
         }
+        System.out.printf(" -----> ");
         switch (trama[21]) {
             case 1:
                 System.out.println("ARP Request (Solicitud a ARP)");
@@ -368,6 +376,7 @@ public class GetNextRawPacket {
             }
             System.out.printf("%02X ", trama[r]);
         }
+        System.out.println("");
         System.out.printf("Sender protocol address: ");
         for (int r = 28; r < 32; r++) {     //Obtener el "la direccion de quien esta preguntando , direccion IP"
             if (r % 16 == 0) {
@@ -375,16 +384,18 @@ public class GetNextRawPacket {
             }
             System.out.printf("%02X ", trama[r]);
         }
+        System.out.println("");
     }
 
     public static void targetAddres(byte[] trama) {
         System.out.printf("Target hardware address: ");
         for (int r = 32; r < 38; r++) {     //Obtener el "la direccion MAC de la que se pregunta"
             if (r % 16 == 0) {
-                System.out.println("");
+               // System.out.println("");
             }
             System.out.printf("%02X ", trama[r]);
         }
+        System.out.println("");
         System.out.printf("Target protocol address: ");
         for (int r = 38; r < 42; r++) {     //Obtener el "la direccion IP por la que se pregunta "
             if (r % 16 == 0) {
@@ -392,5 +403,6 @@ public class GetNextRawPacket {
             }
             System.out.printf("%02X ", trama[r]);
         }
+        System.out.println("\n");
     }
 }
