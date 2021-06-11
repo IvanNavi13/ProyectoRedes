@@ -9,12 +9,14 @@ import java.util.logging.Logger;
 import org.pcap4j.core.BpfProgram.BpfCompileMode;
 import org.pcap4j.core.NotOpenException;
 import org.pcap4j.core.PcapAddress;
+import org.pcap4j.core.PcapDumper;
 import org.pcap4j.core.PcapHandle;
 import org.pcap4j.core.PcapNativeException;
 import org.pcap4j.core.PcapNetworkInterface;
 import org.pcap4j.core.PcapNetworkInterface.PromiscuousMode;
 import org.pcap4j.core.PcapStat;
 import org.pcap4j.core.Pcaps;
+import org.pcap4j.packet.IcmpV4CommonPacket;
 import org.pcap4j.packet.IllegalRawDataException;
 import org.pcap4j.util.ByteArrays;
 import org.pcap4j.util.NifSelector;
@@ -26,7 +28,7 @@ import sun.jvmstat.perfdata.monitor.protocol.local.PerfDataFile;
 public class GetNextRawPacket {
 
     private static final String COUNT_KEY = GetNextRawPacket.class.getName() + ".count";
-    public static  int COUNT = Integer.getInteger(COUNT_KEY, 1000);  //<<<<--------------------------------------Cuantas tramas quiero capturar (contador)
+    public static int COUNT = Integer.getInteger(COUNT_KEY, 15);  //<<<<--------------------------------------Cuantas tramas quiero capturar (contador)
 
     private static final String READ_TIMEOUT_KEY = GetNextRawPacket.class.getName() + ".readTimeout";
     private static final int READ_TIMEOUT = Integer.getInteger(READ_TIMEOUT_KEY, 10); // [ms]
@@ -45,10 +47,10 @@ public class GetNextRawPacket {
     }
 
     public static void main(String[] args) throws PcapNativeException, NotOpenException {
-        ///*     ----> Colocar la interfaz
+        ///*     ----> Colocar la interfaz'
         // new Interfaz().setVisible(true);
         //*/
-
+        PcapDumper dumper = null;
         String filter = args.length != 0 ? args[0] : "";
 
         //System.out.println(COUNT_KEY + ": " + COUNT);
@@ -103,11 +105,11 @@ public class GetNextRawPacket {
 
         if (respuestaFiltro == 1) {
             System.out.println("----------->Selecciona un tipo de filtro <-----------");
-            System.out.println(" 1.- Tipo de trama \n 2.- Por Host \n 3.- Cantidad de Tramas a capturar");
+            System.out.println(" 1.- Tipo de trama \n 2.- Por Host \n 3.- Por puerto \n 4.- Cantidad de Tramas a capturar");
             opcionFiltro = tipoFiltro.nextInt();
             switch (opcionFiltro) {
                 case 1:
-                    System.out.println("  1.-ARP \n  2.-IP");
+                    System.out.println("  1.-ARP \n  2.-IP \n  3.-ICMP");
                     opcionFinal = scanTemporal.nextInt();
                     switch (opcionFinal) {
                         case 1:
@@ -116,126 +118,151 @@ public class GetNextRawPacket {
                         case 2:
                             temporalFilter = "ip";
                             break;
+                        case 3:
+                            temporalFilter = "icmp";
+                            break;
                     }
                     break;
 
                 case 2:
+                    System.out.println("  1.-Origen \n  2.-Destino");
+                    opcionFinal = scanTemporal.nextInt();
+                    if (opcionFinal == 1) {
+                        temporalFilter = "origen";
+                    } else {
+                        temporalFilter = "destino";
+                    }
                     break;
 
                 case 3:
+                    System.out.println("  Coloque el numero de puerto a capturar");
+                    opcionFinal = scanTemporal.nextInt();
+                    temporalFilter = "port " + opcionFinal;
+                    break;
+
+                case 4:
                     System.out.println("  Coloque el numero de tramas que quiere capturar");
                     opcionFinal = scanTemporal.nextInt();
                     COUNT = Integer.getInteger(COUNT_KEY, opcionFinal);  //<<<<--------------------------------------Cuantas tramas quiero capturar (contador)
                     break;
             }
             filter = temporalFilter;
-        } 
+        }
+
+        handle.setFilter(filter, BpfCompileMode.OPTIMIZE);
         
-            handle.setFilter(filter, BpfCompileMode.OPTIMIZE);
-            int num = 0;
-            while (true) {
-                byte[] packet = handle.getNextRawPacket();
-                if (packet == null) {
-                    continue;
-                } else {
-                    System.out.println("\n\n\t\t--->EL NUMERO DE TRAMA CAPTURADA ES: " + (num+1));
-                    System.out.println(handle.getTimestamp());
-                    System.out.println(ByteArrays.toHexString(packet, " "));
-                    for (int j = 0; j < packet.length; j++) {
-                        System.out.printf("%02X ", packet[j]);
-                        if (j % 16 == 0) {
-                            System.out.println("");
-                        }
-                    }//for
-                    System.out.println("");
-                    num++;
+        if (dumper == null){
+            dumper = handle.dumpOpen("archivo.pcap");                       // Si es nulo se crea el archivo .pcap y se abre
+        }
+        
+        int num = 0;
+        while (true) {
+            byte[] packet = handle.getNextRawPacket();
+            if (packet == null) {
+                continue;
+            } else {
+                dumper.dumpRaw(packet);                                     //Se le pasa la trama en crudo para grabarla
+                System.out.println("\n\n\t\t--->EL NUMERO DE TRAMA CAPTURADA ES: " + (num + 1));
+                System.out.println(handle.getTimestamp());
+                System.out.println(ByteArrays.toHexString(packet, " "));
+                for (int j = 0; j < packet.length; j++) {
+                    System.out.printf("%02X ", packet[j]);
+                    if (j % 16 == 0) {
+                        System.out.println("");
+                    }
+                }//for
+                System.out.println("");
+                num++;
 
-                    System.out.println("");
-                    obtenerMAC(packet);
-                    /**
-                     * ******************************************************************************************************************
-                     */
-                    int tipo_b1 = (packet[12] >= 0) ? packet[12] * 256 : (packet[12] + 256) * 256;
-                    int tipo_b2 = (packet[13] >= 0) ? packet[13] : packet[13] + 256;
-                    int tipo = tipo_b1 + tipo_b2;
-                    System.out.println("\nTipo" + tipo);
+                System.out.println("");
+                obtenerMAC(packet);
+                /**
+                 * ******************************************************************************************************************
+                 */
+                int tipo_b1 = (packet[12] >= 0) ? packet[12] * 256 : (packet[12] + 256) * 256;
+                int tipo_b2 = (packet[13] >= 0) ? packet[13] : packet[13] + 256;
+                int tipo = tipo_b1 + tipo_b2;
+                System.out.println("\nTipo" + tipo);
 
-                    switch (tipo) {
+                switch (tipo) {
 
-                        case (int) 2054: {             //   ----------------------------->Encabezado ARP 
-                            System.out.println("-------------> Tipo ARP <---------------");
-                            hardwareType(packet);
-                            protocolType(packet);
-                            hardwareAdressLength(packet);
-                            protocolAdressLength(packet);
-                            opCode(packet);
-                            senderAddres(packet);
-                            targetAddres(packet);
-                        }
+                    case (int) 2054: {             //   ----------------------------->Encabezado ARP 
+                        System.out.println("-------------> Tipo ARP <---------------");
+                        hardwareType(packet);
+                        protocolType(packet);
+                        hardwareAdressLength(packet);
+                        protocolAdressLength(packet);
+                        opCode(packet);
+                        senderAddres(packet);
+                        targetAddres(packet);
+                    }
 
-                        case (int) 2048: {            //   ----------------------------->Encabezado IP 
-                            System.out.println("-------------> Tipo IP <---------------");
-                            try {
-                                //IP
-                                int ihl = (packet[14] & 0x0f) * 4;
-                                //Campo IHL
-                                System.out.println("Tam paquete IP:" + ihl + " bytes");
-                                byte[] tmp_ip = Arrays.copyOfRange(packet, 14, 14 + ihl); // Creo una copia solo del encabezado IP, apartir del byte 14
-                                IpV4Packet ip = IpV4Packet.newPacket(tmp_ip, 0, tmp_ip.length);
-                                //Campo Version
-                                versionIP(ip);
-                                //Campo IHL
-                                ihlIP(ip);
-                                //Campo Servicios Diferenciados                         
-                                difServicesIP(ip);
-                                //Campo Longitud total PDU
-                                longTotalIP(ip);
-                                //Campo Bit identificacion   
-                                bitIdIP(ip);
-                                //Campo Banderas
-                                flagsIP(ip);
-                                //Campo Offset
-                                offsetIP(ip);
-                                //Campo Tiempo de vida [TTL] 
-                                lifeTimeIP(ip);
-                                //Campo protocolo
-                                protocolIP(ip);
-                                //Campo Checksum
-                                checksumIP(ip);
-                                //Campo Direccion IP Origen
-                                sourceIP(ip);
-                                //Campo Direccion IP Destino 
-                                destinIP(ip);
-                                //Campo Opciones y dato
-                                // List <IpV4Packet.IpV4Option>;
+                    case (int) 2048: {            //   ----------------------------->Encabezado IP 
 
-                            } catch (IllegalRawDataException ex) {
-                                Logger.getLogger(GetNextRawPacket.class.getName()).log(Level.SEVERE, null, ex);
-                            }
+                        tipoICMP(packet); //   ----------------------------->PROTOCOLO ICMP 
 
-                        }
+                        System.out.println("-------------> Tipo IP <---------------");
+                        try {
+                            //IP
+                            int ihl = (packet[14] & 0x0f) * 4;
+                            //Campo IHL
+                            System.out.println("Tam paquete IP:" + ihl + " bytes");
+                            byte[] tmp_ip = Arrays.copyOfRange(packet, 14, 14 + ihl); // Creo una copia solo del encabezado IP, apartir del byte 14
+                            IpV4Packet ip = IpV4Packet.newPacket(tmp_ip, 0, tmp_ip.length);
+                            //Campo Version
+                            versionIP(ip);
+                            //Campo IHL
+                            ihlIP(ip);
+                            //Campo Servicios Diferenciados                         
+                            difServicesIP(ip);
+                            //Campo Longitud total PDU
+                            longTotalIP(ip);
+                            //Campo Bit identificacion   
+                            bitIdIP(ip);
+                            //Campo Banderas
+                            flagsIP(ip);
+                            //Campo Offset
+                            offsetIP(ip);
+                            //Campo Tiempo de vida [TTL] 
+                            lifeTimeIP(ip);
+                            //Campo protocolo
+                            protocolIP(ip);
+                            //Campo Checksum
+                            checksumIP(ip);
+                            //Campo Direccion IP Origen
+                            sourceIP(ip);
+                            //Campo Direccion IP Destino 
+                            destinIP(ip);
+                            //Campo Opciones y dato
+                            // List <IpV4Packet.IpV4Option>;
+
+                        } catch (IllegalRawDataException ex) {
+                            Logger.getLogger(GetNextRawPacket.class.getName()).log(Level.SEVERE, null, ex);
+                        }//catch
 
                     }
-                    /**
-                     * ******************************************************************************************************************
-                     */
 
-                    if (num >= COUNT) {
-                        break;
-                    }
+                }
+                /**
+                 * ******************************************************************************************************************
+                 */
+
+                if (num >= COUNT) {
+                    break;
                 }
             }
+        }
 
-            PcapStat ps = handle.getStats();
-            System.out.println("ps_recv: " + ps.getNumPacketsReceived());
-            System.out.println("ps_drop: " + ps.getNumPacketsDropped());
-            System.out.println("ps_ifdrop: " + ps.getNumPacketsDroppedByIf());
-            if (Platform.isWindows()) {
-                System.out.println("bs_capt: " + ps.getNumPacketsCaptured());
-            }
+        dumper.close();                                                     //Se cierra el archivo .pcap 
+        PcapStat ps = handle.getStats();
+        System.out.println("ps_recv: " + ps.getNumPacketsReceived());
+        System.out.println("ps_drop: " + ps.getNumPacketsDropped());
+        System.out.println("ps_ifdrop: " + ps.getNumPacketsDroppedByIf());
+        if (Platform.isWindows()) {
+            System.out.println("bs_capt: " + ps.getNumPacketsCaptured());
+        }
 
-            handle.close();
-        
+        handle.close();
 
     }
 
@@ -334,6 +361,30 @@ public class GetNextRawPacket {
     public static void destinIP(IpV4Packet ip) {
         //Campo Direccion IP Destino 
         System.out.println("IP destino: " + ip.getHeader().getDstAddr().getHostAddress());
+    }
+
+    /*----------------------------------------------------------------------------------------------------TIPO ICMP-----------------------------------------------------------------------*/
+    public static void tipoICMP(byte[] trama) { //-------------------------------------------------------------->ICMP
+        try {
+
+            int ihl = (trama[14] & 0x0f) * 4;
+            byte[] tmp_ip = Arrays.copyOfRange(trama, 14, 14 + ihl); // Creo una copia solo del encabezado IP, apartir del byte 14
+            IpV4Packet ip = IpV4Packet.newPacket(tmp_ip, 0, tmp_ip.length);
+            int proto = ip.getHeader().getProtocol().value().intValue();
+            switch (proto) {
+                case (int) 1:
+                    System.out.println("---------->ICMP<----------");
+                    int longTotal = (ip.getHeader().getTotalLength() > 0) ? ip.getHeader().getTotalLength() : ip.getHeader().getTotalLength() + 65536;
+                    int lt_PDU_trans = longTotal - (ihl * 4);
+                    byte[] tmp_icmp = Arrays.copyOfRange(trama, 14 + ihl, 14+ ihl + lt_PDU_trans);
+                    IcmpV4CommonPacket icmp = IcmpV4CommonPacket.newPacket(tmp_icmp, 0, tmp_icmp.length);
+                    System.out.println("Tipo: " + icmp.getHeader().getType().valueAsString() + "(" + icmp.getHeader().getType().name() + ")");
+                     System.out.println("Código: " + icmp.getHeader().getCode().valueAsString() + "(" + icmp.getHeader().getCode().name() + ")");
+            }
+
+        } catch (IllegalRawDataException ex) {
+            Logger.getLogger(GetNextRawPacket.class.getName()).log(Level.SEVERE, null, ex);
+        }//catch
     }
 
     /*----------------------------------------------------------------------------------------------------TIPO ARP-----------------------------------------------------------------------*/
