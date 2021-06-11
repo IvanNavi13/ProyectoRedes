@@ -46,6 +46,8 @@ public class GetNextRawPacket {
     private GetNextRawPacket() {
     }
 
+    private static int numETHERNET = 0, numIEEE = 0, numARP = 0, numIP = 0, numICMP = 0, numIGMP = 0, numTCP = 0, numUDP = 0;
+
     public static void main(String[] args) throws PcapNativeException, NotOpenException {
         ///*     ----> Colocar la interfaz'
         // new Interfaz().setVisible(true);
@@ -96,20 +98,23 @@ public class GetNextRawPacket {
         Scanner seleccion = new Scanner(System.in);
         Scanner tipoFiltro = new Scanner(System.in);
         Scanner scanTemporal = new Scanner(System.in);
+        Scanner scanTempora2 = new Scanner(System.in);
+        Scanner teclearDirecciones = new Scanner(System.in);
         String temporalFilter = "";
         int opcionFiltro;
         int opcionFinal;
+        String opcionFinal2;
         System.out.println("-------------------<<<<<<<<<Quieres un filtro para la captura de tramas? >>>>>>>>>>-------------------");
         System.out.println("1.- Si \t\t 2.-No");
         int respuestaFiltro = seleccion.nextInt();
 
         if (respuestaFiltro == 1) {
             System.out.println("----------->Selecciona un tipo de filtro <-----------");
-            System.out.println(" 1.- Tipo de trama \n 2.- Por Host \n 3.- Por puerto \n 4.- Cantidad de Tramas a capturar");
+            System.out.println(" 1.- Tipo de protocolo \n 2.- Por Host \n 3.- Por puerto \n 4.- Por tamaño \n 5.- Cantidad de Tramas a capturar");
             opcionFiltro = tipoFiltro.nextInt();
             switch (opcionFiltro) {
                 case 1:
-                    System.out.println("  1.-ARP \n  2.-IP \n  3.-ICMP");
+                    System.out.println("  1.-ARP \n  2.-IP \n  3.-ICMP \n  4.-IGMP");
                     opcionFinal = scanTemporal.nextInt();
                     switch (opcionFinal) {
                         case 1:
@@ -121,6 +126,9 @@ public class GetNextRawPacket {
                         case 3:
                             temporalFilter = "icmp";
                             break;
+                        case 4:
+                            temporalFilter = "igmp";
+                            break;
                     }
                     break;
 
@@ -128,9 +136,13 @@ public class GetNextRawPacket {
                     System.out.println("  1.-Origen \n  2.-Destino");
                     opcionFinal = scanTemporal.nextInt();
                     if (opcionFinal == 1) {
-                        temporalFilter = "origen";
+                        System.out.println("Digite la direccion ip origen");
+                        opcionFinal2 = teclearDirecciones.nextLine();
+                        temporalFilter = "src host " + opcionFinal2;
                     } else {
-                        temporalFilter = "destino";
+                        System.out.println("Digite la direccion ip destino");
+                        opcionFinal2 = teclearDirecciones.nextLine();
+                        temporalFilter = "dst host " + opcionFinal2;
                     }
                     break;
 
@@ -141,6 +153,20 @@ public class GetNextRawPacket {
                     break;
 
                 case 4:
+                    System.out.println("  1.-Menor o igual que (<=) \n  2.-Mayor o igual que (>=)");
+                    opcionFinal = scanTemporal.nextInt();
+                    if (opcionFinal == 1) {
+                        System.out.println("Digite el tamaño del paquete que sea <=");
+                        opcionFinal2 = teclearDirecciones.nextLine();
+                        temporalFilter = "less " + opcionFinal2;
+                    } else {
+                        System.out.println("Digite el tamaño del paquete que sea >=");
+                        opcionFinal2 = teclearDirecciones.nextLine();
+                        temporalFilter = "greater " + opcionFinal2;
+                    }
+                    break;
+
+                case 5:
                     System.out.println("  Coloque el numero de tramas que quiere capturar");
                     opcionFinal = scanTemporal.nextInt();
                     COUNT = Integer.getInteger(COUNT_KEY, opcionFinal);  //<<<<--------------------------------------Cuantas tramas quiero capturar (contador)
@@ -150,11 +176,11 @@ public class GetNextRawPacket {
         }
 
         handle.setFilter(filter, BpfCompileMode.OPTIMIZE);
-        
-        if (dumper == null){
+
+        if (dumper == null) {
             dumper = handle.dumpOpen("archivo.pcap");                       // Si es nulo se crea el archivo .pcap y se abre
         }
-        
+
         int num = 0;
         while (true) {
             byte[] packet = handle.getNextRawPacket();
@@ -195,6 +221,7 @@ public class GetNextRawPacket {
                         opCode(packet);
                         senderAddres(packet);
                         targetAddres(packet);
+                        numARP++;
                     }
 
                     case (int) 2048: {            //   ----------------------------->Encabezado IP 
@@ -204,6 +231,7 @@ public class GetNextRawPacket {
                         System.out.println("-------------> Tipo IP <---------------");
                         try {
                             //IP
+                            numIP++;
                             int ihl = (packet[14] & 0x0f) * 4;
                             //Campo IHL
                             System.out.println("Tam paquete IP:" + ihl + " bytes");
@@ -253,6 +281,13 @@ public class GetNextRawPacket {
             }
         }
 
+        System.out.println("\n\n\n----------------------------ESTADISTICAS----------------------------");
+        System.out.println("El numero de tramas ARP es: " + numARP + "\t Y su porcentaje es: " + estadisticaPorcentaje(numARP) + "%");
+        System.out.println("El numero de tramas IP es: " + numIP + "\t Y su porcentaje es: " + estadisticaPorcentaje(numIP) + "%");
+        System.out.println("El numero de tramas ICMP es: " + numICMP + "\t Y su porcentaje es: " + estadisticaPorcentaje(numICMP) + "%");
+        System.out.println("El numero de tramas ICMP es: " + numIGMP + "\t Y su porcentaje es: " + estadisticaPorcentaje(numIGMP) + "%");
+        System.out.println("--------------------------------------------------------------------");
+        System.out.println("");
         dumper.close();                                                     //Se cierra el archivo .pcap 
         PcapStat ps = handle.getStats();
         System.out.println("ps_recv: " + ps.getNumPacketsReceived());
@@ -264,8 +299,8 @@ public class GetNextRawPacket {
 
         handle.close();
 
-    }
-
+    }//main
+/*----------------------------------------------------------------------------------------------------Inicio de la Trama-----------------------------------------------------------------------*/
     public static void obtenerMAC(byte[] trama) {
         System.out.printf("MAC DESTINO:");
         for (int r = 0; r < 6; r++) {     //Obtener la direccion MAC Destino
@@ -284,6 +319,14 @@ public class GetNextRawPacket {
             System.out.printf("%02X ", trama[r]);
         }
         System.out.println("");
+    }
+
+    /*----------------------------------------------------------------------------------------------------ESTADISTICAS-----------------------------------------------------------------------*/
+    public static int estadisticaPorcentaje(int numProtocolo) {
+
+        int porcentajeFinal = 0;
+        porcentajeFinal = (numProtocolo * 100) / 15;   //Cambiar el 15 por otro numero, ya que por default captura 15 tramas el programa
+        return porcentajeFinal;
     }
 
     /*----------------------------------------------------------------------------------------------------TIPO IP-----------------------------------------------------------------------*/
@@ -374,12 +417,13 @@ public class GetNextRawPacket {
             switch (proto) {
                 case (int) 1:
                     System.out.println("---------->ICMP<----------");
+                    numICMP++;
                     int longTotal = (ip.getHeader().getTotalLength() > 0) ? ip.getHeader().getTotalLength() : ip.getHeader().getTotalLength() + 65536;
                     int lt_PDU_trans = longTotal - (ihl * 4);
-                    byte[] tmp_icmp = Arrays.copyOfRange(trama, 14 + ihl, 14+ ihl + lt_PDU_trans);
+                    byte[] tmp_icmp = Arrays.copyOfRange(trama, 14 + ihl, 14 + ihl + lt_PDU_trans);
                     IcmpV4CommonPacket icmp = IcmpV4CommonPacket.newPacket(tmp_icmp, 0, tmp_icmp.length);
                     System.out.println("Tipo: " + icmp.getHeader().getType().valueAsString() + "(" + icmp.getHeader().getType().name() + ")");
-                     System.out.println("Código: " + icmp.getHeader().getCode().valueAsString() + "(" + icmp.getHeader().getCode().name() + ")");
+                    System.out.println("Código: " + icmp.getHeader().getCode().valueAsString() + "(" + icmp.getHeader().getCode().name() + ")");
             }
 
         } catch (IllegalRawDataException ex) {
